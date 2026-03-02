@@ -1,0 +1,17 @@
+{
+  "destinations": [
+    {
+      "id": 1,
+      "name": "Bali",
+      "country": "Indonesia",
+      "image": "https://images.unsplash.com/photo-1537996194471-e657df975ab4"
+    },
+    {
+      "id": 2,
+      "name": "Santorini",
+      "country": "Greece",
+      "image": "https://images.unsplash.com/photo-1507525428034-b723cf961d3e"
+    }
+  ],
+  "trips": []
+}

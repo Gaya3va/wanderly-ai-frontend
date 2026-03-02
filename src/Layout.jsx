@@ -1,13 +1,13 @@
 import { useState, useEffect } from "react";
-import { Link, useLocation } from "react-router-dom";
-import { createPageUrl } from "@/utils";
-import { base44 } from "@/api/base44Client";
+import { Link, Navigate, useLocation } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
+import { api } from "@/api/api";
 import {
   Compass, Map, BookOpen, Star, Wallet, Tag, Users,
   Moon, Sun, Menu, X, ChevronDown, LogOut, User, Bell
 } from "lucide-react";
 
-export default function Layout({ children, currentPageName }) {
+export default function Layout({ children }) {
   const [darkMode, setDarkMode] = useState(() => {
     return localStorage.getItem("wanderlust_theme") === "dark";
   });
@@ -15,6 +15,7 @@ export default function Layout({ children, currentPageName }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [userDropdown, setUserDropdown] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
 
   useEffect(() => {
     if (darkMode) {
@@ -27,19 +28,27 @@ export default function Layout({ children, currentPageName }) {
   }, [darkMode]);
 
   useEffect(() => {
-    base44.auth.me().then(setUser).catch(() => setUser(null));
-  }, []);
-
-  const navLinks = [
-    { name: "Discover", page: "Discover", icon: Compass },
-    { name: "Destinations", page: "Destinations", icon: Map },
-    { name: "Plan Trip", page: "PlanTrip", icon: Map },
-    { name: "Journal", page: "Journal", icon: BookOpen },
-    { name: "Deals", page: "Deals", icon: Tag },
-    { name: "Community", page: "Community", icon: Users },
+    const loadUser = async () => {
+      try {
+        const data = await api("/auth/me");
+        setUser(data.user);
+      } catch (err) {
+        setUser(null);
+      }
+    };
+    loadUser();
+   }, []);
+   
+   const navLinks = [
+    { name: "Discover", page: "/discover", icon: Compass },
+    { name: "Destinations", page: "/destinations", icon: Map },
+    { name: "Plan Trip", page: "/plan-trips", icon: Map },
+    { name: "Journal", page: "/journal", icon: BookOpen },
+    { name: "Deals", page: "/deals", icon: Tag },
+    { name: "Community", page: "/community", icon: Users },
   ];
 
-  const isActive = (page) => currentPageName === page;
+  const isActive = (path) => location.pathname === path;
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: "var(--bg-primary)", color: "var(--text-primary)" }}>
@@ -65,7 +74,7 @@ export default function Layout({ children, currentPageName }) {
         className="sticky top-0 z-50 backdrop-blur-md">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
           {/* Logo */}
-          <Link to={createPageUrl("Discover")} className="flex items-center gap-2.5 group">
+          <Link to="/discover" className="flex items-center gap-2.5 group">
             <div className="w-8 h-8 rounded-xl flex items-center justify-center"
               style={{ background: "linear-gradient(135deg, var(--accent), var(--accent-2))" }}>
               <Compass className="w-4 h-4 text-white" />
@@ -77,12 +86,12 @@ export default function Layout({ children, currentPageName }) {
 
           {/* Desktop Nav */}
           <div className="hidden md:flex items-center gap-1">
-            {navLinks.map(({ name, page }) => (
+            {navLinks.map(({ name, path }) => (
               <Link
-                key={page}
-                to={createPageUrl(page)}
-                className={`relative nav-link px-3 py-2 text-sm font-medium rounded-lg transition-colors ${isActive(page) ? "nav-link-active" : ""}`}
-                style={{ color: isActive(page) ? "var(--accent)" : "var(--text-secondary)" }}
+                key={path}
+                to={path}
+                className={`relative nav-link px-3 py-2 text-sm font-medium rounded-lg transition-colors ${isActive(path) ? "nav-link-active" : ""}`}
+                style={{ color: isActive(path) ? "var(--accent)" : "var(--text-secondary)" }}
               >
                 {name}
               </Link>
@@ -118,13 +127,13 @@ export default function Layout({ children, currentPageName }) {
                 </button>
                 {userDropdown && (
                   <div className="absolute right-0 top-12 w-48 rounded-2xl overflow-hidden dropdown-menu z-50">
-                    <Link to={createPageUrl("Profile")}
+                    <Link to="/profile"
                       className="flex items-center gap-2.5 px-4 py-3 text-sm transition-colors hover:opacity-70"
                       style={{ color: "var(--text-primary)" }}
                       onClick={() => setUserDropdown(false)}>
                       <User className="w-4 h-4" /> My Profile
                     </Link>
-                    <Link to={createPageUrl("PlanTrip")}
+                    <Link to="/plan-trips"
                       className="flex items-center gap-2.5 px-4 py-3 text-sm transition-colors hover:opacity-70"
                       style={{ color: "var(--text-primary)" }}
                       onClick={() => setUserDropdown(false)}>
@@ -132,16 +141,20 @@ export default function Layout({ children, currentPageName }) {
                     </Link>
                     <hr style={{ borderColor: "var(--border-color)" }} />
                     <button
-                      onClick={() => base44.auth.logout()}
-                      className="w-full flex items-center gap-2.5 px-4 py-3 text-sm transition-colors hover:opacity-70"
-                      style={{ color: "#e05050" }}>
+                      onClick={async () =>{
+                        await api("/auth/logout", { method: "POST" });
+                        setUser(null);
+                        navigate("/auth");
+                      }}
+                      className="flex items-center gap-2.5 w-full text-left px-4 py-3 text-sm transition-colors hover:opacity-70"
+                      style={{ color: "var(--text-primary)" }}>
                       <LogOut className="w-4 h-4" /> Sign Out
                     </button>
                   </div>
                 )}
               </div>
             ) : (
-              <Link to={createPageUrl("Auth")}
+              <Link to="/auth"
                 className="px-4 py-2 rounded-full text-sm font-semibold text-white transition-all btn-primary">
                 Sign In
               </Link>
@@ -160,15 +173,15 @@ export default function Layout({ children, currentPageName }) {
         {/* Mobile Menu */}
         {menuOpen && (
           <div className="md:hidden px-4 pb-4 pt-2 space-y-1" style={{ backgroundColor: "var(--bg-card)" }}>
-            {navLinks.map(({ name, page, icon: Icon }) => (
+            {navLinks.map(({ name, path, icon: Icon }) => (
               <Link
-                key={page}
-                to={createPageUrl(page)}
+                key={path}
+                to={path}
                 onClick={() => setMenuOpen(false)}
-                className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${isActive(page) ? "nav-link-active" : ""}`}
+                className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${isActive(path) ? "nav-link-active" : ""}`}
                 style={{
-                  backgroundColor: isActive(page) ? "var(--accent-soft)" : "transparent",
-                  color: isActive(page) ? "var(--accent)" : "var(--text-secondary)"
+                  backgroundColor: isActive(path) ? "var(--accent-soft)" : "transparent",
+                  color: isActive(path) ? "var(--accent)" : "var(--text-secondary)"
                 }}>
                 <Icon className="w-4 h-4" />
                 {name}
